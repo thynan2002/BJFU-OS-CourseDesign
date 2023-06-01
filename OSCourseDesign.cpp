@@ -253,7 +253,7 @@ void help()
 	cout << "    renew \t\t\t\t:刷新缓存" << endl;
 	cout << "    cd [filename]\t\t\t:切换当前目录（可用相对路径）" << endl;
 	cout << "    dir [*.--]	\t\t\t:查找所有目录下后缀为.--的文件" << endl;
-	cout << "    dir [-option]\t\t\t:查看当前目录下的文件及目录" << endl;
+	cout << "    dir [/option]\t\t\t:查看当前目录下的文件及目录" << endl;
 	cout << "       /d\t\t\t\t  -显示所有目录" << endl;
 	cout << "       /f [-option]\t\t\t  -显示文件" << endl;
 	cout << "          -a\t\t\t\t   -所有" << endl;
