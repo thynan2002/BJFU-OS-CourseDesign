@@ -7,7 +7,7 @@
 #include<Windows.h>
 #define DIR 1
 #define FILE 2
-#define KONG 0
+#define NONE 0
 
 #ifndef SEEK_SET
 #define SEEK_SET 0
@@ -51,7 +51,7 @@ int editfile = -1;//全局变量，存储当前打开的文件块号
 const char* VirtualFileSystem = "ghy.bin";//虚拟文件存储位置
 string currentPath = "ghy";
 
-MemoryBlock VFS[BlockSize];
+MemoryBlock DISKBLOCK[BlockSize];
 
 
 //获取文件行数
@@ -95,7 +95,7 @@ string change(string name)
 	int i = 0;
 	for (; i < BlockSize; i++)
 	{
-		if (VFS[i].fname == currentPath)
+		if (DISKBLOCK[i].fname == currentPath)
 		{
 			break;
 		}
@@ -117,7 +117,7 @@ void head();
 void format(int num)
 {
 	writeBack();
-	if (VFS[0].permissions == "format" && num == 1)
+	if (DISKBLOCK[0].permissions == "format" && num == 1)
 	{
 		return;
 	}
@@ -126,32 +126,33 @@ void format(int num)
 	clear();
 	head();
 	currentPath = "ghy";
-	VFS[0].fname = "ghy";
-	VFS[0].type = DIR;
-	VFS[0].line = 0;
-	VFS[0].fatherPos = -1;
-	VFS[0].permissions = "format";
+	DISKBLOCK[0].fname = "ghy";
+	DISKBLOCK[0].type = DIR;
+	DISKBLOCK[0].line = 0;
+	DISKBLOCK[0].fatherPos = -1;
+	DISKBLOCK[0].permissions = "format";
 	//cout << VFS[0].permissions << endl;
-	VFS[0].selfPos = 0;
+	DISKBLOCK[0].selfPos = 0;
 	for (int i = 0; i < BlockSize; i++)
 	{
-		VFS[0].file_context[i] = "";
-		VFS[0].dir_childPos[i] = 0;
+		DISKBLOCK[0].file_context[i] = "";
+		DISKBLOCK[0].dir_childPos[i] = 0;
 	}
 	for (int i = 1; i < BlockSize; i++)
 	{
-		VFS[i].fname = " ";
-		VFS[i].type = KONG;
-		VFS[i].line = 0;
-		VFS[i].fatherPos = 0;
-		VFS[i].permissions = "-1";
-		VFS[i].selfPos = i;
+		DISKBLOCK[i].fname = " ";
+		DISKBLOCK[i].type = NONE;
+		DISKBLOCK[i].line = 0;
+		DISKBLOCK[i].fatherPos = 0;
+		DISKBLOCK[i].permissions = "-1";
+		DISKBLOCK[i].selfPos = i;
 		for (int j = 0; j < BlockSize; j++)
 		{
-			VFS[i].file_context[j] = "";
-			VFS[i].dir_childPos[j] = 0;
+			DISKBLOCK[i].file_context[j] = "";
+			DISKBLOCK[i].dir_childPos[j] = 0;
 		}
 	}
+	writeBack();
 }
 
 //读取并加载虚拟磁盘
@@ -162,51 +163,51 @@ void read()
 	{
 		string str1;
 		getline(f, str1);
-		VFS[i].fname = str1;
+		DISKBLOCK[i].fname = str1;
 
 		string str;
 		getline(f, str);
 		if (str == "DIR")
-			VFS[i].type = 1;
+			DISKBLOCK[i].type = 1;
 		else if (str == "FILE")
-			VFS[i].type = 2;
+			DISKBLOCK[i].type = 2;
 		else
-			VFS[i].type = 0;
+			DISKBLOCK[i].type = 0;
 
 		string str2;
 		getline(f, str2);
-		VFS[i].line = atoi(str2.c_str());
+		DISKBLOCK[i].line = atoi(str2.c_str());
 
 		string str3;
 		getline(f, str3);
-		VFS[i].selfPos = atoi(str3.c_str());
+		DISKBLOCK[i].selfPos = atoi(str3.c_str());
 
 		string str4;
 		getline(f, str4);
-		VFS[i].fatherPos = atoi(str4.c_str());
+		DISKBLOCK[i].fatherPos = atoi(str4.c_str());
 
 		string str_;
 		getline(f, str_);
-		VFS[i].permissions = str_.c_str();
+		DISKBLOCK[i].permissions = str_.c_str();
 
 		string str5;
-		if (VFS[i].line == 0)
+		if (DISKBLOCK[i].line == 0)
 			getline(f, str5);
 		else {
-			if (VFS[i].type == FILE) {
-				for (int j = 0; j < VFS[i].line; j++)
+			if (DISKBLOCK[i].type == FILE) {
+				for (int j = 0; j < DISKBLOCK[i].line; j++)
 				{
 					getline(f, str5);
-					VFS[i].file_context[j] = str5;
+					DISKBLOCK[i].file_context[j] = str5;
 				}
 				getline(f, str5);
 			}
-			else if (VFS[i].type == DIR)
+			else if (DISKBLOCK[i].type == DIR)
 			{
 				getline(f, str5);
 				vector<string>vec = split(str5, '\t');
-				for (int j = 0; j < VFS[i].line; j++)
-					VFS[i].dir_childPos[j] = atoi(vec[j].c_str());
+				for (int j = 0; j < DISKBLOCK[i].line; j++)
+					DISKBLOCK[i].dir_childPos[j] = atoi(vec[j].c_str());
 			}
 		}
 	}
@@ -223,20 +224,20 @@ void read()
 void writeBack() {
 	ofstream fout(VirtualFileSystem, ios::trunc); // 创建一个 ofstream 对象 fout，用于向磁盘文件写入数据。ios::trunc表示清空文件内容。
 	for (int i = 0; i < BlockSize; i++) { // 遍历虚拟文件系统中的每一个块
-		if (VFS[i].type == 1) { // 如果是目录块，则将其信息写入磁盘文件中
-			fout << VFS[i].fname << endl << "DIR" << endl << VFS[i].line << endl << VFS[i].selfPos << endl << VFS[i].fatherPos << endl<<VFS[i].permissions<<endl;
-			for (int j = 0; j < VFS[i].line; j++) {
-				fout << VFS[i].dir_childPos[j] << "\t"; // 输出子目录的编号
+		if (DISKBLOCK[i].type == 1) { // 如果是目录块，则将其信息写入磁盘文件中
+			fout << DISKBLOCK[i].fname << endl << "DIR" << endl << DISKBLOCK[i].line << endl << DISKBLOCK[i].selfPos << endl << DISKBLOCK[i].fatherPos << endl<<DISKBLOCK[i].permissions<<endl;
+			for (int j = 0; j < DISKBLOCK[i].line; j++) {
+				fout << DISKBLOCK[i].dir_childPos[j] << "\t"; // 输出子目录的编号
 			}
 		}
-		else if (VFS[i].type == 2) { // 如果是文件块，则将其信息写入磁盘文件中
-			fout << VFS[i].fname << endl << "FILE" << endl << VFS[i].line << endl << VFS[i].selfPos << endl << VFS[i].fatherPos << endl << VFS[i].permissions << endl;
-			for (int j = 0; j < VFS[i].line; j++) {
-				fout << VFS[i].file_context[j] << endl; // 输出文件内容
+		else if (DISKBLOCK[i].type == 2) { // 如果是文件块，则将其信息写入磁盘文件中
+			fout << DISKBLOCK[i].fname << endl << "FILE" << endl << DISKBLOCK[i].line << endl << DISKBLOCK[i].selfPos << endl << DISKBLOCK[i].fatherPos << endl << DISKBLOCK[i].permissions << endl;
+			for (int j = 0; j < DISKBLOCK[i].line; j++) {
+				fout << DISKBLOCK[i].file_context[j] << endl; // 输出文件内容
 			}
 		}
-		else if (VFS[i].type == 0) { // 如果是空块，则将其信息写入磁盘文件中
-			fout << VFS[i].fname << endl << "KONG" << endl << VFS[i].line << endl << VFS[i].selfPos << endl << VFS[i].fatherPos << endl << VFS[i].permissions << endl;
+		else if (DISKBLOCK[i].type == 0) { // 如果是空块，则将其信息写入磁盘文件中
+			fout << DISKBLOCK[i].fname << endl << "NONE" << endl << DISKBLOCK[i].line << endl << DISKBLOCK[i].selfPos << endl << DISKBLOCK[i].fatherPos << endl << DISKBLOCK[i].permissions << endl;
 		}
 		fout << endl; // 输出一个空行
 	}
@@ -305,7 +306,7 @@ void clear()
 void mkdir(string dir) {
 	int i = 1;
 	for (; i < BlockSize; i++) {
-		if (VFS[i].type == KONG) // 查找空块
+		if (DISKBLOCK[i].type == NONE) // 查找空块
 			break;
 	}
 	// 如果空间不足
@@ -316,13 +317,13 @@ void mkdir(string dir) {
 
 	int tmp; // 当前目录的位置
 	for (tmp = 0; tmp < BlockSize; tmp++) {
-		if (VFS[tmp].fname == currentPath)
+		if (DISKBLOCK[tmp].fname == currentPath)
 			break;
 	}
 	//查找当前目录
 
-	for (int p = 0; p < VFS[tmp].line; p++) {
-		if (VFS[VFS[tmp].dir_childPos[p]].fname == dir) {
+	for (int p = 0; p < DISKBLOCK[tmp].line; p++) {
+		if (DISKBLOCK[DISKBLOCK[tmp].dir_childPos[p]].fname == dir) {
 			cout << "Duplicate directory name!" << endl;
 			return;
 		}
@@ -343,7 +344,7 @@ void mkdir(string dir) {
 
 	int q = 0;
 	for (; q < BlockSize; q++) {
-		if (VFS[q].fname == str)
+		if (DISKBLOCK[q].fname == str)
 			break;
 	}
 	// 找到父目录
@@ -355,23 +356,23 @@ void mkdir(string dir) {
 	//// 如果找不到父目录
 
 	for (int j = 0; j < BlockSize; j++) {
-		if (VFS[q].dir_childPos[j] == 0) {
-			VFS[q].dir_childPos[j] = i;
-			VFS[q].line++;
+		if (DISKBLOCK[q].dir_childPos[j] == 0) {
+			DISKBLOCK[q].dir_childPos[j] = i;
+			DISKBLOCK[q].line++;
 			break;
 		}
 	}
 	// 将子目录的信息添加到父目录中
 
-	VFS[i].fname = dir; // 将新目录的信息写入空块
-	VFS[i].selfPos = i;
-	VFS[i].fatherPos = q;
-	VFS[i].line = 0;
-	VFS[i].type = DIR;
-	VFS[i].permissions = "-1";
+	DISKBLOCK[i].fname = dir; // 将新目录的信息写入空块
+	DISKBLOCK[i].selfPos = i;
+	DISKBLOCK[i].fatherPos = q;
+	DISKBLOCK[i].line = 0;
+	DISKBLOCK[i].type = DIR;
+	DISKBLOCK[i].permissions = "-1";
 	for (int p = 0; p < BlockSize; p++) {
-		VFS[i].file_context[p] = "";
-		VFS[i].dir_childPos[p] = 0;
+		DISKBLOCK[i].file_context[p] = "";
+		DISKBLOCK[i].dir_childPos[p] = 0;
 	}
 	// 将子目录写入空块
 	cout << "Success" << endl;
@@ -389,7 +390,7 @@ void cd(string path)
 	for (int j = 0; j < BlockSize; j++)
 	{
 		// 如果当前VFS块的文件名与目标路径相同
-		if (VFS[j].fname == path)
+		if (DISKBLOCK[j].fname == path)
 		{
 			// 将当前路径设为目标路径
 			currentPath = path;
@@ -428,12 +429,12 @@ void _import(string filepath, string opt) // 要在文件路径的末尾加上�
 	int i = 0;
 	for (; i < BlockSize; i++) // 找到当前路径
 	{
-		if (VFS[i].fname == currentPath)
+		if (DISKBLOCK[i].fname == currentPath)
 		{
 			break;
 		}
 	}
-	if (VFS[i].line == BlockSize)
+	if (DISKBLOCK[i].line == BlockSize)
 	{
 		cout << "Current directory is full!" << endl; // 当前目录已满
 		return;
@@ -441,7 +442,7 @@ void _import(string filepath, string opt) // 要在文件路径的末尾加上�
 	int temp = 0;
 	for (; temp < BlockSize; temp++) // 找到空的内存块
 	{
-		if (VFS[temp].type == KONG)
+		if (DISKBLOCK[temp].type == NONE)
 			break;
 	}
 	if (temp == BlockSize)
@@ -453,28 +454,28 @@ void _import(string filepath, string opt) // 要在文件路径的末尾加上�
 	fstream f(filepath);
 	for (int p = 0; p < line + 1; p++) // 写入
 	{
-		getline(f, VFS[temp].file_context[p]);
+		getline(f, DISKBLOCK[temp].file_context[p]);
 	}
 	if (opt == "-rw")
 	{
-		VFS[temp].permissions = "rw";
+		DISKBLOCK[temp].permissions = "rw";
 	}
 	else if (opt == "-r")
 	{
-		VFS[temp].permissions = "r";
+		DISKBLOCK[temp].permissions = "r";
 	}
 	else if (opt == "-w")
 	{
-		VFS[temp].permissions = "w";
+		DISKBLOCK[temp].permissions = "w";
 	}
-	VFS[temp].selfPos = temp;
-	VFS[temp].fatherPos = i;
+	DISKBLOCK[temp].selfPos = temp;
+	DISKBLOCK[temp].fatherPos = i;
 	vector<string> vec = split(filepath, '\\');
 	string f_name = currentPath + "/" + vec[vec.size() - 1];
 	int times = 0;
 	for (int k = 0; k < BlockSize; k++)
 	{
-		if (f_name == VFS[k].fname)
+		if (f_name == DISKBLOCK[k].fname)
 		{
 			times++;
 		}
@@ -482,20 +483,20 @@ void _import(string filepath, string opt) // 要在文件路径的末尾加上�
 	if (times != 0)
 	{
 		cout << "Duplicate filename and [" << vec[vec.size() - 1] << "] will be renameed [" << vec[vec.size() - 1] << "(" << times << ")]" << endl;
-		VFS[temp].fname = f_name + "(" + to_string(times) + ")";
+		DISKBLOCK[temp].fname = f_name + "(" + to_string(times) + ")";
 	}
 	else
 	{
-		VFS[temp].fname = f_name;
+		DISKBLOCK[temp].fname = f_name;
 	}
-	VFS[temp].line = line;
-	VFS[temp].type = FILE;
+	DISKBLOCK[temp].line = line;
+	DISKBLOCK[temp].type = FILE;
 	for (int p = 0; p < BlockSize; p++)
 	{
-		if (VFS[i].dir_childPos[p] == 0)
+		if (DISKBLOCK[i].dir_childPos[p] == 0)
 		{
-			VFS[i].dir_childPos[p] = temp;
-			VFS[i].line++;
+			DISKBLOCK[i].dir_childPos[p] = temp;
+			DISKBLOCK[i].line++;
 			break;
 		}
 	}
@@ -512,7 +513,7 @@ void dir(string input)
 
 	for (; pos < BlockSize; pos++)//找到了当前路径
 	{
-		if (VFS[pos].fname == currentPath)
+		if (DISKBLOCK[pos].fname == currentPath)
 		{
 			break;
 		}
@@ -528,23 +529,37 @@ void dir(string input)
 		for (int k = 0; k < BlockSize; k++)
 		{
 			int j = 0;
-			for (; j < VFS[k].fname.length(); j++)
+			for (; j < DISKBLOCK[k].fname.length(); j++)
 			{
 				//cout << VFS[i].fname[j] << " ";
-				char curCh = VFS[k].fname[j];
+				char curCh = DISKBLOCK[k].fname[j];
 				if (curCh == '.')
 				{
 					strPos = j;
 					break;
 				}
 			}
+			int l = DISKBLOCK[k].fname.length() - 1;
+			for (; l > 0; l--)
+			{
+				//cout << VFS[i].fname[j] << " ";
+				char curCh = DISKBLOCK[k].fname[l];
+				if (curCh == '/')
+				{
+					strPos = l;
+					break;
+				}
+			}
+
+			string file_preffix = DISKBLOCK[k].fname.substr(0, l);
 			//cout << endl;
-			string file_suffix = VFS[k].fname.substr(j);
+			string file_suffix = DISKBLOCK[k].fname.substr(j);
 			//cout << "---"<<file_suffix << endl;
-			if (file_suffix == _suffix)
+			//当前路径下的文件
+			if (file_suffix == _suffix&&file_preffix == currentPath)
 			{
 				isOutput = true;
-				cout << "  " << VFS[k].fname << endl;
+				cout << "  " << DISKBLOCK[k].fname << endl;
 			}
 		}
 
@@ -556,9 +571,9 @@ void dir(string input)
 	}
 	if (input == "/s")		
 	{
-		for (int j = 0; j < VFS[pos].line; j++)
+		for (int j = 0; j < DISKBLOCK[pos].line; j++)
 		{
-			vector<string> vec = split(VFS[VFS[pos].dir_childPos[j]].fname, '/');
+			vector<string> vec = split(DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].fname, '/');
 			cout << vec[vec.size() - 1] << "\t";
 			isExist = true;
 		}
@@ -566,11 +581,11 @@ void dir(string input)
 	}
 	else if (input == "/d")		//显示当前目录
 	{
-		for (int j = 0; j < VFS[pos].line; j++)
+		for (int j = 0; j < DISKBLOCK[pos].line; j++)
 		{
-			if (VFS[VFS[pos].dir_childPos[j]].type == DIR)
+			if (DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].type == DIR)
 			{
-				vector<string> vec = split(VFS[VFS[pos].dir_childPos[j]].fname, '/');
+				vector<string> vec = split(DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].fname, '/');
 				cout << vec[vec.size() - 1] << "\t";
 				isExist = true;
 			}
@@ -580,31 +595,31 @@ void dir(string input)
 	else if (input == "/f")//显示所有文件
 	{
 		string opt; cin >> opt;
-		for (int j = 0; j < VFS[pos].line; j++)
+		for (int j = 0; j < DISKBLOCK[pos].line; j++)
 		{
-			if (VFS[VFS[pos].dir_childPos[j]].type == FILE)
+			if (DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].type == FILE)
 			{
-				if (opt == "-r" && VFS[VFS[pos].dir_childPos[j]].permissions == "r")
+				if (opt == "-r" && DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].permissions == "r")
 				{
-					vector<string> vec = split(VFS[VFS[pos].dir_childPos[j]].fname, '/');
+					vector<string> vec = split(DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].fname, '/');
 					cout << vec[vec.size() - 1] << "\t";
 					isExist = true;
 				}
-				else if (opt == "-w" && VFS[VFS[pos].dir_childPos[j]].permissions == "w")
+				else if (opt == "-w" && DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].permissions == "w")
 				{
-					vector<string> vec = split(VFS[VFS[pos].dir_childPos[j]].fname, '/');
+					vector<string> vec = split(DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].fname, '/');
 					cout << vec[vec.size() - 1] << "\t";
 					isExist = true;
 				}
-				else if (opt == "-rw" && VFS[VFS[pos].dir_childPos[j]].permissions == "rw")
+				else if (opt == "-rw" && DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].permissions == "rw")
 				{
-					vector<string> vec = split(VFS[VFS[pos].dir_childPos[j]].fname, '/');
+					vector<string> vec = split(DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].fname, '/');
 					cout << vec[vec.size() - 1] << "\t";
 					isExist = true;
 				}
 				else if (opt == "-a")
 				{
-					vector<string> vec = split(VFS[VFS[pos].dir_childPos[j]].fname, '/');
+					vector<string> vec = split(DISKBLOCK[DISKBLOCK[pos].dir_childPos[j]].fname, '/');
 					cout << vec[vec.size() - 1] << "\t";
 					isExist = true;
 				}
@@ -624,7 +639,7 @@ void _export(string filename, string path)
 {
 	for (int j = 0; j < BlockSize; j++)
 	{
-		if (VFS[j].fname == filename)
+		if (DISKBLOCK[j].fname == filename)
 		{
 			vector<string>vec = split(filename, '/');
 			ofstream fout(path + vec[vec.size() - 1]);
@@ -633,9 +648,9 @@ void _export(string filename, string path)
 				cout << "Can't open"<<endl;
 				return;
 			}
-			for (int p = 0; p < VFS[j].line; p++)
+			for (int p = 0; p < DISKBLOCK[j].line; p++)
 			{
-				fout << VFS[j].file_context[p] << endl;
+				fout << DISKBLOCK[j].file_context[p] << endl;
 			}
 			cout << "Export complete" << endl;
 			fout.close();
@@ -648,47 +663,47 @@ void rmdir(string name)
 {
 	for (int j = 0; j < BlockSize; j++)
 	{
-		if (VFS[j].type == FILE)
+		/*if (DISKBLOCK[j].type == FILE)
 		{
 			cout << "It is FILE, you want [rm]?" << endl;
 			return;
-		}
-		if (VFS[j].fname == name)
+		}*/
+		if (DISKBLOCK[j].fname == name)
 		{
-			int len = VFS[j].line;//内容长度
-			int i = VFS[j].fatherPos;
+			int len = DISKBLOCK[j].line;//内容长度
+			int i = DISKBLOCK[j].fatherPos;
 			if (len != 0)
 			{
 				int* a = new int[len];
 				for (int q = 0; q < len; q++)
 				{
-					a[q] = VFS[j].dir_childPos[q];
+					a[q] = DISKBLOCK[j].dir_childPos[q];
 				}
 				for (int q = 0; q < len; q++)
 				{
-					rmdir(VFS[a[q]].fname);
+					rmdir(DISKBLOCK[a[q]].fname);
 				}
 			}
-			VFS[j].fname = "";
-			VFS[j].type = KONG;
-			VFS[j].fatherPos = 0;
-			VFS[j].line = 0;
-			for (int p = 0; p < VFS[j].line; p++)
+			DISKBLOCK[j].fname = "";
+			DISKBLOCK[j].type = NONE;
+			DISKBLOCK[j].fatherPos = 0;
+			DISKBLOCK[j].line = 0;
+			for (int p = 0; p < DISKBLOCK[j].line; p++)
 			{
-				VFS[j].file_context[p] = "";
-				VFS[j].dir_childPos[p] = 0;
+				DISKBLOCK[j].file_context[p] = "";
+				DISKBLOCK[j].dir_childPos[p] = 0;
 			}
 
 			//把父目录的line--，pos更改
-			VFS[i].line--;
+			DISKBLOCK[i].line--;
 			int p = 0;
 			while (p < BlockSize - 1)
 			{
-				if (VFS[i].dir_childPos[p] == j)
+				if (DISKBLOCK[i].dir_childPos[p] == j)
 				{
 					while (p < BlockSize - 1)
 					{
-						VFS[i].dir_childPos[p] = VFS[i].dir_childPos[p + 1];
+						DISKBLOCK[i].dir_childPos[p] = DISKBLOCK[i].dir_childPos[p + 1];
 						p++;
 					}
 					break;
@@ -711,35 +726,36 @@ void rm(string name)
 
 	for (int j = 0; j < BlockSize; j++)
 	{
-		if (VFS[j].type == DIR)
+		string file_name = currentPath + "/" + name;
+		if (file_name == DISKBLOCK[j].fname && DISKBLOCK[j].type == DIR)
 		{
 			cout << "It is DIR,you want [rmdir]?" << endl;
 			return;
 		}
-		if (VFS[j].fname == name && VFS[j].type == FILE)
+		if (DISKBLOCK[j].fname == name && DISKBLOCK[j].type == FILE)
 		{
-			int i = VFS[j].fatherPos;
-			int len = VFS[j].line;
-			VFS[j].fname = "";
-			VFS[j].type = KONG;
-			VFS[j].fatherPos = 0;
-			VFS[j].permissions = "-1";
-			VFS[j].line = 0;
+			int i = DISKBLOCK[j].fatherPos;
+			int len = DISKBLOCK[j].line;
+			DISKBLOCK[j].fname = "";
+			DISKBLOCK[j].type = NONE;
+			DISKBLOCK[j].fatherPos = 0;
+			DISKBLOCK[j].permissions = "-1";
+			DISKBLOCK[j].line = 0;
 			for (int p = 0; p < BlockSize; p++)
 			{
-				VFS[j].file_context[p] = "";
-				VFS[j].dir_childPos[p] = 0;
+				DISKBLOCK[j].file_context[p] = "";
+				DISKBLOCK[j].dir_childPos[p] = 0;
 			}
 			//把父目录的line--，pos更改
-			VFS[i].line--;
+			DISKBLOCK[i].line--;
 			int p = 0;
 			while (p < BlockSize - 1)
 			{
-				if (VFS[i].dir_childPos[p] == j)
+				if (DISKBLOCK[i].dir_childPos[p] == j)
 				{
 					while (p < BlockSize - 1)
 					{
-						VFS[i].dir_childPos[p] = VFS[i].dir_childPos[p + 1];
+						DISKBLOCK[i].dir_childPos[p] = DISKBLOCK[i].dir_childPos[p + 1];
 						p++;
 					}
 					break;
@@ -765,40 +781,40 @@ void rm(string name)
 * 如果用户输入了 'Y' 或 'y'，则输出文件或目录的详细信息，包括路径、类型（文件或目录）、行数、占用的内存块数等。
 * 如果是目录，则输出其子目录的编号，如果是文件，则输出文件内容及其权限。
 * 如果用户输入了 'Y' 或 'y'，则函数返回，否则继续遍历下一个块。
-* 如果遍历完所有块都没有找到匹配的文件或目录，则输出 "不存在！"。
+* 如果遍历完所有块都没有找到匹配的文件或目录->不存在
 */
 void find(string name) {//不同路径但是重名的文件
 	vector<string> vec; // 存储文件路径的各个部分
 	for (int i = 0; i < BlockSize; i++) { // 遍历虚拟文件系统中的每一个块
-		vec = split(VFS[i].fname, '/'); // 将文件名按照斜杠（'/'）进行分割，存储到 vec 中
+		vec = split(DISKBLOCK[i].fname, '/'); // 将文件名按照斜杠（'/'）进行分割，存储到 vec 中
 		if (vec[vec.size() - 1] == name) { // 如果最后一个元素与传入的名称 name 相同，则进行下一步操作
-			cout << VFS[i].fname<<"?[y]" << endl; // 输出文件名（包括路径）
+			cout << DISKBLOCK[i].fname<<"?[y]" << endl; // 输出文件名（包括路径）
 			char ch;
 			cin >> ch;
 			if (ch == 'Y' || ch == 'y') { // 如果用户输入了 'Y' 或 'y'，则输出文件或目录的详细信息
-				cout << "path：" << VFS[i].fname << endl; // 输出路径
-				if (VFS[i].type == KONG)
+				cout << "path：" << DISKBLOCK[i].fname << endl; // 输出路径
+				if (DISKBLOCK[i].type == NONE)
 					cout << "NULL" << endl;
 				else { // 如果不是空块，则输出详细信息
-					if (VFS[i].type == DIR) { // 如果是目录，则输出其子目录的编号
+					if (DISKBLOCK[i].type == DIR) { // 如果是目录，则输出其子目录的编号
 						cout << "It is a DIRECTORY" << endl;
-						cout << VFS[i].line << " sub dir/file" << endl;
+						cout << DISKBLOCK[i].line << " sub dir/file" << endl;
 					}
 					else { // 如果是文件，则输出文件内容及其权限
 						cout << "It is a FILE" << endl;
-						cout << VFS[i].line << " lines" << endl;
+						cout << DISKBLOCK[i].line << " lines" << endl;
 					}
 				}
-				cout << "Memory block：" << VFS[i].selfPos << endl; // 输出占用的内存块数
-				if (VFS[i].fatherPos == -1)
+				cout << "Memory block：" << DISKBLOCK[i].selfPos << endl; // 输出占用的内存块数
+				if (DISKBLOCK[i].fatherPos == -1)
 					cout << "Root: ghy" << endl;
 				//else
 				//	cout << "parentdir：" << VFS[VFS[i].fatherNum].fname << endl; // 输出父目录的路径
-				if (VFS[i].type == DIR) { // 如果是目录，则输出其子目录的编号
+				if (DISKBLOCK[i].type == DIR) { // 如果是目录，则输出其子目录的编号
 					cout << "sub dir/file memory position：";
-					if (VFS[i].line != 0) { // 如果有子目录，则逐个输出它们的编号
-						for (int p = 0; p < VFS[i].line; p++) {
-							cout << VFS[i].dir_childPos[p] << "\t";
+					if (DISKBLOCK[i].line != 0) { // 如果有子目录，则逐个输出它们的编号
+						for (int p = 0; p < DISKBLOCK[i].line; p++) {
+							cout << DISKBLOCK[i].dir_childPos[p] << "\t";
 						}
 						cout << endl;
 					}
@@ -806,25 +822,25 @@ void find(string name) {//不同路径但是重名的文件
 						cout << "Null" << endl;
 					}
 				}
-				else if (VFS[i].type == FILE) { // 如果是文件，则输出文件内容及其权限
+				else if (DISKBLOCK[i].type == FILE) { // 如果是文件，则输出文件内容及其权限
 					cout << "File content：";
-					if (VFS[i].line != 0) { // 如果文件有内容，则逐行输出
-						for (int p = 0; p < VFS[i].line; p++) {
-							if (VFS[i].permissions == "w") { // 如果文件只有写权限
+					if (DISKBLOCK[i].line != 0) { // 如果文件有内容，则逐行输出
+						for (int p = 0; p < DISKBLOCK[i].line; p++) {
+							if (DISKBLOCK[i].permissions == "w") { // 如果文件只有写权限
 								cout << "File is Writable ONLY" << endl;
 								break;
 							}
-							cout << VFS[i].file_context[p] << endl;
+							cout << DISKBLOCK[i].file_context[p] << endl;
 						}
 					}
 					else { // 如果文件没有内容，则输出 "Null"
-						if (VFS[i].permissions == "w") { // 如果文件只有写权限
+						if (DISKBLOCK[i].permissions == "w") { // 如果文件只有写权限
 							cout << "File is Writable ONLY" << endl;
 							break;
 						}
 						cout << "Null" << endl;
 					}
-					cout << "File permissions:" << VFS[i].permissions << endl; // 输出文件的权限
+					cout << "File permissions:" << DISKBLOCK[i].permissions << endl; // 输出文件的权限
 				}
 				return; // 函数返回
 			}
@@ -858,7 +874,7 @@ void create(string fname,string permissions)
 	int i = 0;
 	for (; i < BlockSize; i++)
 	{
-		if (VFS[i].fname == currentPath)
+		if (DISKBLOCK[i].fname == currentPath)
 		{
 			break;
 		}
@@ -870,13 +886,13 @@ void create(string fname,string permissions)
 	}
 	for (int j = 0; j < BlockSize; j++)
 	{
-		if (VFS[j].fname == currentPath + "/" + fname)
+		if (DISKBLOCK[j].fname == currentPath + "/" + fname)
 		{
 			cout << "Invalid Input" << endl;
 			return;
 		}
 	}
-	if (VFS[i].line == BlockSize)
+	if (DISKBLOCK[i].line == BlockSize)
 	{
 		cout << "Not enough space" << endl;
 		return;
@@ -884,7 +900,7 @@ void create(string fname,string permissions)
 	int tmp = 0;
 	for (; tmp < BlockSize; tmp++)
 	{
-		if (VFS[tmp].type == KONG)
+		if (DISKBLOCK[tmp].type == NONE)
 			break;
 	}
 	if (tmp == BlockSize)
@@ -893,19 +909,19 @@ void create(string fname,string permissions)
 		return;
 	}
 
-	VFS[tmp].fname = currentPath + "/" + fname;
-	VFS[tmp].selfPos = tmp;
-	VFS[tmp].fatherPos = i;
-	VFS[tmp].line = 0;
-	VFS[tmp].type = FILE;
+	DISKBLOCK[tmp].fname = currentPath + "/" + fname;
+	DISKBLOCK[tmp].selfPos = tmp;
+	DISKBLOCK[tmp].fatherPos = i;
+	DISKBLOCK[tmp].line = 0;
+	DISKBLOCK[tmp].type = FILE;
 	//VFS[tmp].curPos = 0;
-	VFS[tmp].permissions = permissions;
+	DISKBLOCK[tmp].permissions = permissions;
 	for (int p = 0; p < BlockSize; p++)
 	{
-		VFS[tmp].file_context[p] = "";
+		DISKBLOCK[tmp].file_context[p] = "";
 	}
-	VFS[i].dir_childPos[VFS[i].line] = tmp;
-	VFS[i].line++;
+	DISKBLOCK[i].dir_childPos[DISKBLOCK[i].line] = tmp;
+	DISKBLOCK[i].line++;
 	cout << "Success" << endl;
 }
 
@@ -922,11 +938,11 @@ void time()
 void rename(string oldname, string newname)
 {
 	int i = 0;
-	//重命名并不需要打开文件
 	for (; i < BlockSize; i++)
 	{
-		if (VFS[i].fname == oldname)
+		if (DISKBLOCK[i].fname == oldname)
 		{
+			//重名检测
 			for (int j = 0; j < BlockSize; j++)
 			{
 				if (j == i)
@@ -935,14 +951,14 @@ void rename(string oldname, string newname)
 				}
 				else
 				{
-					if (VFS[j].fname == newname)
+					if (DISKBLOCK[j].fname == newname)
 					{
 						cout << "Duplicate directory name!" << endl;
 						return;
 					}
 				}
 			}
-			VFS[i].fname = newname;
+			DISKBLOCK[i].fname = newname;
 			cout << "Success" << endl;
 			break;
 		}
@@ -961,8 +977,8 @@ void showVer()
 bool lseek(int blockNum, int& line, int& pos, int offset)
 {
 	int fileLength = 0;
-	for (int i = 0; i < VFS[blockNum].line; i++) {
-		fileLength += VFS[blockNum].file_context[i].length();
+	for (int i = 0; i < DISKBLOCK[blockNum].line; i++) {
+		fileLength += DISKBLOCK[blockNum].file_context[i].length();
 		//cout << "*** " << fileLength << endl;
 	}
 	if (offset > fileLength || offset < 0) {
@@ -978,12 +994,12 @@ bool lseek(int blockNum, int& line, int& pos, int offset)
 	*/
 	int sumCh = 0;
 	int curLi, curPos;
-	for (int i = 0; i < VFS[blockNum].line; i++)
+	for (int i = 0; i < DISKBLOCK[blockNum].line; i++)
 	{
-		sumCh += VFS[blockNum].file_context[i].length();
+		sumCh += DISKBLOCK[blockNum].file_context[i].length();
 		if (sumCh > offset)
 		{
-			sumCh -= VFS[blockNum].file_context[i].length();
+			sumCh -= DISKBLOCK[blockNum].file_context[i].length();
 			curLi = i;
 			curPos = offset - sumCh;
 			line = curLi;
@@ -1003,7 +1019,7 @@ void readfile(string fname)
 	int i = 0;
 	for (; i < BlockSize; i++)
 	{
-		if (VFS[i].fname == currentPath + "/" + fname)
+		if (DISKBLOCK[i].fname == currentPath + "/" + fname)
 		{
 			break;
 		}
@@ -1018,17 +1034,17 @@ void readfile(string fname)
 		cout << "file not opened" << endl;
 		return;
 	}
-	if (VFS[i].type == DIR)
+	if (DISKBLOCK[i].type == DIR)
 	{
 		cout << "It is DIR" << endl;
 		return;
 	}
-	if (VFS[i].permissions == "w")
+	if (DISKBLOCK[i].permissions == "w")
 	{
 		cout << "File is Writable ONLY";
 		return;
 	}
-	if (VFS[i].file_context->empty())
+	if (DISKBLOCK[i].file_context->empty())
 	{
 		cout << endl << "Null" << endl << endl;;
 	}
@@ -1038,9 +1054,9 @@ void readfile(string fname)
 		{
 			//read [filename] [opt]
 			//cout << "文件内容:" << endl;
-			for (int j = 0; j < VFS[editfile].line; j++)
+			for (int j = 0; j < DISKBLOCK[editfile].line; j++)
 			{
-				cout << VFS[editfile].file_context[j] << endl;
+				cout << DISKBLOCK[editfile].file_context[j] << endl;
 			}
 		}
 		else if (opt == "-s")//separate
@@ -1049,26 +1065,31 @@ void readfile(string fname)
 			int offset;
 			cin >> offset;
 			int _line, _pos;
+			//使用lseek
 			if (lseek(i, _line, _pos, offset) == false)
 			{
 				return;
 			}
 			else
 			{
-				for (int j = _pos; j < VFS[i].file_context[_line].length(); j++)
+				for (int j = _pos; j < DISKBLOCK[i].file_context[_line].length(); j++)
 				{
-					cout << VFS[i].file_context[_line][j];
+					//先输出lseek定位到的行
+					//string[]的构造
+					cout << DISKBLOCK[i].file_context[_line][j];
 				}
 				cout << endl;
-				for (int j = _line + 1; j < VFS[i].line; j++)
+				//输出后面的行
+				for (int j = _line + 1; j < DISKBLOCK[i].line; j++)
 				{
-					if (j > VFS[i].line)
+					//事实上lseek定位到的行是最后一行就不输出了，否则 context 会数组越界
+					if (j > DISKBLOCK[i].line)
 					{
 						return;
 					}
 					else
 					{
-						cout << VFS[editfile].file_context[j] << endl;
+						cout << DISKBLOCK[editfile].file_context[j] << endl;
 					}
 				}
 			}
@@ -1086,7 +1107,7 @@ void writefile(string fname)
 	int i = 0;
 	for (; i < BlockSize; i++)
 	{
-		if (VFS[i].fname == currentPath + "/" + fname)
+		if (DISKBLOCK[i].fname == currentPath + "/" + fname)
 		{
 			break;
 		}
@@ -1101,13 +1122,13 @@ void writefile(string fname)
 		cout << "File not opened" << endl;
 		return;
 	}
-	if (VFS[i].type == DIR)
+	if (DISKBLOCK[i].type == DIR)
 	{
 		cout << "It is DIR" << endl;
 		return;
 	}
 
-	if (VFS[i].permissions == "r")
+	if (DISKBLOCK[i].permissions == "r")
 	{
 		cout << "File is Read ONLY" << endl;
 		return;
@@ -1115,10 +1136,10 @@ void writefile(string fname)
 	if (opt == "-n")
 	{
 		//write [filename] [opt] [data]
-		getchar();
+		getchar();//
 		string data;
 		getline(cin, data);
-		VFS[i].file_context[VFS[i].line++] = data;
+		DISKBLOCK[i].file_context[DISKBLOCK[i].line++] = data;
 		cout << "Success" << endl;
 	}
 	else if (opt == "-i")
@@ -1136,7 +1157,7 @@ void writefile(string fname)
 		}
 		else
 		{
-			VFS[i].file_context[_line].insert(_pos, data);
+			DISKBLOCK[i].file_context[_line].insert(_pos, data);
 			cout << "Success" << endl;
 		}
 	}
@@ -1152,7 +1173,7 @@ void open(string fname)
 	int i = 0;
 	for (; i < BlockSize; i++)
 	{
-		if (VFS[i].fname == currentPath + "/" + fname)
+		if (DISKBLOCK[i].fname == currentPath + "/" + fname)
 		{
 			break;
 		}
@@ -1162,7 +1183,7 @@ void open(string fname)
 		cout << "No such file" << endl;
 		return;
 	}
-	if (VFS[i].type == DIR)
+	if (DISKBLOCK[i].type == DIR)
 	{
 		cout << "It is DIR" << endl;
 		return;
@@ -1170,7 +1191,7 @@ void open(string fname)
 	if (editfile != -1)
 	{
 		//cout << VFS[editfile].fname << "文件已打开!" << endl;
-		cout << "Already opened file  " << VFS[editfile].fname << " ,please close this file first" << endl;
+		cout << "Already opened file  " << DISKBLOCK[editfile].fname << " ,please close this file first" << endl;
 		return;
 	}
 	editfile = i;  //记录打开文件的块号
@@ -1207,11 +1228,12 @@ int main() {
 	{
 		bool isClear = false;
 		cout << currentPath + ">";
-		writeBack();
-		read();
+
+		
 		cin >> opt;
 		if (opt == "mkdir")
 		{
+			read();
 			cin >> cmd_1;
 			if (cmd_1[0] == '/')
 			{
@@ -1222,6 +1244,7 @@ int main() {
 				cmd_1 = change(cmd_1);
 				mkdir(cmd_1);
 			}
+			writeBack();
 		}
 		else if (opt == "clear")
 		{
@@ -1234,49 +1257,60 @@ int main() {
 		}
 		else if (opt == "create")
 		{
+			read();
 			cin >> cmd_1;
 			//cin >> cmd3;
 
 			create(cmd_1, cmd_2);
+			writeBack();
 		}
 		else if (opt == "cd")
 		{
+			read();
 			cin >> cmd_1;
 			cmd_1 = change(cmd_1);
 			cd(cmd_1);
 		}
 		else if (opt == "dir")
 		{
+			read();
 			cin >> cmd_1;
 			dir(cmd_1);
 		}
 		else if (opt == "exit")
 		{
+			read();
 			writeBack();
 			break;
 		}
 		else if (opt == "import")
 		{
+			read();
 			cin >> cmd_1;
 			cin >> cmd_2;
 			_import(cmd_1,cmd_2);
+			writeBack();
 		}
 		else if (opt == "export")
 		{
+			read();
 			cin >> cmd_1;
 			cmd_1 = change(cmd_1);
 			cin >> cmd_2;
 			_export(cmd_1, cmd_2);
+			writeBack();
 		}
 		else if (opt == "rmdir")
 		{
-
+			read();
 			cin >> cmd_1;
 			cmd_1 = currentPath + "/" + cmd_1;
 			rmdir(cmd_1);
+			writeBack();
 		}
 		else if(opt == "open")
 		{
+			read();
 			cin >> cmd_1;
 			//cmd_1 = change(cmd_1);
 			open(cmd_1);
@@ -1291,12 +1325,16 @@ int main() {
 		}
 		else if (opt == "rm")
 		{
+			read();
 			cin >> cmd_1;
 			cmd_1 = change(cmd_1);
 			rm(cmd_1);
+			writeBack();
 		}
 		else if (opt == "find")
 		{
+
+			read();
 			cin >> cmd_1;
 			find(cmd_1);
 		}
@@ -1306,11 +1344,13 @@ int main() {
 		}
 		else if (opt == "rename")
 		{
+			read();
 			cin >> cmd_1;
 			cmd_1 = currentPath + "/" + cmd_1;
 			cin >> cmd_2;
 			cmd_2 = currentPath + "/" + cmd_2;
 			rename(cmd_1, cmd_2);
+			writeBack();
 		}
 		else if (opt == "ver")
 		{
@@ -1318,21 +1358,25 @@ int main() {
 		}
 		else if (opt == "read")
 		{
+			read();
 			cin >> cmd_1;
 			readfile(cmd_1);
 		}
 		else if (opt == "write")
 		{
+			read();
 			cin >> cmd_1;
 			
 			writefile(cmd_1);
-			}
+			writeBack();
+		}
 		else if (opt == "renew")
 		{
-			writeBack();
 			read();
 		}
 		else {
+
+			read();
 			cout << "Invalid Input,input help to learn more." << endl;
 		}
 		
