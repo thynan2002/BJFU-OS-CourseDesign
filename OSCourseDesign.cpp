@@ -116,6 +116,7 @@ void clear();
 void head();
 void format(int num)
 {
+	editfile = -1;
 	writeBack();
 	if (DISKBLOCK[0].permissions == "format" && num == 1)
 	{
