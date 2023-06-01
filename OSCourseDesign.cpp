@@ -256,14 +256,14 @@ void help()
 	cout << "    dir [-option]\t\t\t:查看当前目录下的文件及目录" << endl;
 	cout << "       /d\t\t\t\t  -显示所有目录" << endl;
 	cout << "       /f [-option]\t\t\t  -显示文件" << endl;
+	cout << "          -a\t\t\t\t   -所有" << endl;
 	cout << "          -r\t\t\t\t   -显示只读文件" << endl;
 	cout << "          -w\t\t\t\t   -显示只写文件" << endl;
 	cout << "          -rw\t\t\t\t   -显示读写文件" << endl;
 	cout << "       /s\t\t\t\t   -显示所有文件和目录" << endl;
 	cout << "    create [filename] [-option]\t\t:创建文件，并赋予权限" << endl;
-	cout << "       -a\t\t\t\t   -所有" << endl;
 	cout << "       -r\t\t\t\t   -只读" << endl;
-	cout << "       -r\t\t\t\t   -只写" << endl;
+	cout << "       -w\t\t\t\t   -只写" << endl;
 	cout << "       -rw\t\t\t\t   -读写" << endl;
 	cout << "    read [filename] [-option]\t\t:查看文件中的信息" << endl;
 	cout << "       -a\t\t\t\t   -查看所有内容" << endl;
