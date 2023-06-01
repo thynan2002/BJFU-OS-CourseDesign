@@ -111,7 +111,7 @@ string change(string name)
 }
 
 void writeBack();
-//格式化VFS
+//格式化DISKBLOCK
 void clear();
 void head();
 void format(int num)
@@ -131,7 +131,7 @@ void format(int num)
 	DISKBLOCK[0].line = 0;
 	DISKBLOCK[0].fatherPos = -1;
 	DISKBLOCK[0].permissions = "format";
-	//cout << VFS[0].permissions << endl;
+	//cout << DISKBLOCK[0].permissions << endl;
 	DISKBLOCK[0].selfPos = 0;
 	for (int i = 0; i < BlockSize; i++)
 	{
@@ -379,17 +379,17 @@ void mkdir(string dir) {
 }
 
 /*
-* 遍历所有的 VFS 块
-* 如果当前 VFS 块的fname与目标路径相同，则将当前路径设为目标路径，并返回
+* 遍历所有的 DISKBLOCK 块
+* 如果当前 DISKBLOCK 块的fname与目标路径相同，则将当前路径设为目标路径，并返回
 * 如果没有找到目标路径，则输出错误信息
 */
 //移动当前路径
 void cd(string path)
 {
-	// 遍历所有的VFS块
+	// 遍历所有的DISKBLOCK块
 	for (int j = 0; j < BlockSize; j++)
 	{
-		// 如果当前VFS块的文件名与目标路径相同
+		// 如果当前DISKBLOCK块的文件名与目标路径相同
 		if (DISKBLOCK[j].fname == path)
 		{
 			// 将当前路径设为目标路径
@@ -402,13 +402,13 @@ void cd(string path)
 }
 
 /*
-* 找到当前路径所在的 VFS 块
-* 如果当前 VFS 块已满，则输出 "Current directory is full!" 错误信息
-* 找到一个空的 VFS 块
+* 找到当前路径所在的 DISKBLOCK 块
+* 如果当前 DISKBLOCK 块已满，则输出 "Current directory is full!" 错误信息
+* 找到一个空的 DISKBLOCK 块
 * 如果内存已满，则输出 "Memory is full! Please delete some files first!" 错误信息
-* 打开要引入的文件，并逐行读取文件内容，并将其写入到空的 VFS 块中
-* 更新空的 VFS 块的相关信息，包括文件名、行数、类型等
-* 更新当前路径所在的 VFS 块的相关信息，包括文件名、行数、占用位置等
+* 打开要引入的文件，并逐行读取文件内容，并将其写入到空的 DISKBLOCK 块中
+* 更新空的 DISKBLOCK 块的相关信息，包括文件名、行数、类型等
+* 更新当前路径所在的 DISKBLOCK 块的相关信息，包括文件名、行数、占用位置等
 */
 // 在当前目录下从磁盘引入文件
 void _import(string filepath, string opt) // 要在文件路径的末尾加上空格
@@ -531,7 +531,7 @@ void dir(string input)
 			int j = 0;
 			for (; j < DISKBLOCK[k].fname.length(); j++)
 			{
-				//cout << VFS[i].fname[j] << " ";
+				//cout << DISKBLOCK[i].fname[j] << " ";
 				char curCh = DISKBLOCK[k].fname[j];
 				if (curCh == '.')
 				{
@@ -542,7 +542,7 @@ void dir(string input)
 			int l = DISKBLOCK[k].fname.length() - 1;
 			for (; l > 0; l--)
 			{
-				//cout << VFS[i].fname[j] << " ";
+				//cout << DISKBLOCK[i].fname[j] << " ";
 				char curCh = DISKBLOCK[k].fname[l];
 				if (curCh == '/')
 				{
@@ -809,7 +809,7 @@ void find(string name) {//不同路径但是重名的文件
 				if (DISKBLOCK[i].fatherPos == -1)
 					cout << "Root: ghy" << endl;
 				//else
-				//	cout << "parentdir：" << VFS[VFS[i].fatherNum].fname << endl; // 输出父目录的路径
+				//	cout << "parentdir：" << DISKBLOCK[DISKBLOCK[i].fatherNum].fname << endl; // 输出父目录的路径
 				if (DISKBLOCK[i].type == DIR) { // 如果是目录，则输出其子目录的编号
 					cout << "sub dir/file memory position：";
 					if (DISKBLOCK[i].line != 0) { // 如果有子目录，则逐个输出它们的编号
@@ -914,7 +914,7 @@ void create(string fname,string permissions)
 	DISKBLOCK[tmp].fatherPos = i;
 	DISKBLOCK[tmp].line = 0;
 	DISKBLOCK[tmp].type = FILE;
-	//VFS[tmp].curPos = 0;
+	//DISKBLOCK[tmp].curPos = 0;
 	DISKBLOCK[tmp].permissions = permissions;
 	for (int p = 0; p < BlockSize; p++)
 	{
@@ -1190,7 +1190,7 @@ void open(string fname)
 	}
 	if (editfile != -1)
 	{
-		//cout << VFS[editfile].fname << "文件已打开!" << endl;
+		//cout << DISKBLOCK[editfile].fname << "文件已打开!" << endl;
 		cout << "Already opened file  " << DISKBLOCK[editfile].fname << " ,please close this file first" << endl;
 		return;
 	}
