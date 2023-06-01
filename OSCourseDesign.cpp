@@ -252,7 +252,7 @@ void help()
 	cout << "    mkdir [filename]\t\t\t:创建目录" << endl;
 	cout << "    rmdir [filename]\t\t\t:删除目录" << endl;
 	cout << "    renew \t\t\t\t:刷新缓存" << endl;
-	cout << "    cd [filename]\t\t\t:切换当前目录（可用相对路径）" << endl;
+	cout << "    cd [filename]\t\t\t:切换当前目录" << endl;
 	cout << "    dir [*.--]	\t\t\t:查找所有目录下后缀为.--的文件" << endl;
 	cout << "    dir [/option]\t\t\t:查看当前目录下的文件及目录" << endl;
 	cout << "       /d\t\t\t\t  -显示所有目录" << endl;
