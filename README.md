@@ -1,5 +1,8 @@
 # BJFU-OS-CourseDesign
 # BJFU 操作系统课程设计
+
+查过了叫"Course Design"或者叫"Curriculum Design"都没关系...
+
 VIRTUAL FILE SYSTEM [版本: 23.0601.1527_pm]
 
 (BJFU) 201002113 GHY。 虚拟文件系统。
